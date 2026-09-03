@@ -4813,6 +4813,23 @@ mod tests {
     }
 
     #[test]
+    fn gemini_38_flash_reasoning_and_normalization() {
+        let mut body = json!({"thinking": {"type": "enabled"}});
+        apply_gemini(&mut body, "google/gemini-3.8-flash", Some("thinking"), Some("low"));
+        assert_eq!(body.get("reasoning"), Some(&json!({"effort": "low"})));
+
+        apply_gemini(&mut body, "google/gemini-3.8-flash", Some("thinking"), Some("high"));
+        assert_eq!(body.get("reasoning"), Some(&json!({"effort": "high"})));
+
+        assert_eq!(normalize_gemini_reasoning_effort("google/gemini-3.8-flash", "low"), "low");
+        assert_eq!(normalize_gemini_reasoning_effort("google/gemini-3.8-flash", "medium"), "medium");
+        assert_eq!(normalize_gemini_reasoning_effort("google/gemini-3.8-flash", "high"), "high");
+        assert_eq!(normalize_gemini_reasoning_effort("google/gemini-3.8-flash", "minimal"), "high");
+        assert_eq!(normalize_gemini_reasoning_effort("google/gemini-3.8-flash", "max"), "high");
+        assert_eq!(normalize_gemini_reasoning_effort("google/gemini-3.8-flash", "xhigh"), "high");
+    }
+
+    #[test]
     fn gemini_35_lite_minimal_sends_effort_minimal() {
         let mut body = json!({"thinking": {"type": "enabled"}});
         apply_gemini(&mut body, "google/gemini-3.5-flash-lite", Some("thinking"), Some("minimal"));

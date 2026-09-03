@@ -1690,13 +1690,13 @@ fn build_gemini_profile(name: &str) -> OpenRouterProfile {
         "claude-haiku-4-5".into(),
     ];
 
-    let opus_entry = model_entry("claude-opus-5", "google/gemini-3.7-flash", Some("thinking"), Some("high"));
-    let sonnet_entry = model_entry("claude-sonnet-5", "google/gemini-3.7-flash", Some("thinking"), Some("medium"));
-    let haiku_entry = model_entry("claude-haiku-4-5", "google/gemini-3.7-flash", Some("thinking"), Some("low"));
+    let opus_entry = model_entry("claude-opus-5", "google/gemini-3.8-flash", Some("thinking"), Some("high"));
+    let sonnet_entry = model_entry("claude-sonnet-5", "google/gemini-3.8-flash", Some("thinking"), Some("medium"));
+    let haiku_entry = model_entry("claude-haiku-4-5", "google/gemini-3.8-flash", Some("thinking"), Some("low"));
 
-    model_map.insert("claude-opus-5".into(), "google/gemini-3.7-flash".into());
-    model_map.insert("claude-sonnet-5".into(), "google/gemini-3.7-flash".into());
-    model_map.insert("claude-haiku-4-5".into(), "google/gemini-3.7-flash".into());
+    model_map.insert("claude-opus-5".into(), "google/gemini-3.8-flash".into());
+    model_map.insert("claude-sonnet-5".into(), "google/gemini-3.8-flash".into());
+    model_map.insert("claude-haiku-4-5".into(), "google/gemini-3.8-flash".into());
 
     models.insert("claude-opus-5".into(), opus_entry);
     models.insert("claude-sonnet-5".into(), sonnet_entry);
@@ -1719,10 +1719,9 @@ fn build_gemini_profile_json(name: &str) -> serde_json::Value {
 }
 
 /// One-time: rewrite a built-in `OpenRouter: Gemini` profile that still carries
-/// an earlier default (either the initial 3.1 Pro/3.7 Flash/3.5 Flash Lite default
-/// or the interim all-3.7-Flash High/High/Low default) to the current
-/// all-3.7-Flash High/Medium/Low default. Only an EXACT match of all three
-/// slots is migrated; if any slot was user-edited the profile is left untouched.
+/// an earlier default to the current all-3.8-Flash High/Medium/Low default.
+/// Only an EXACT match of all three slots is migrated; if any slot was user-edited
+/// the profile is left untouched.
 fn migrate_gemini_profile_to_current_default(config_path: &std::path::Path) -> bool {
     let Ok(content) = std::fs::read_to_string(config_path) else {
         return false;
@@ -1767,9 +1766,13 @@ fn migrate_gemini_profile_to_current_default(config_path: &std::path::Path) -> b
     std::fs::write(config_path, serialized).is_ok()
 }
 
-/// True when a built-in Gemini profile still carries one of the earlier
-/// migratable built-in defaults across all three slots.
+/// True when a built-in Gemini profile still carries an exact historical
+/// built-in default (exact keys, count, upstream models, reasoning efforts, and thinking modes).
+/// Any profile with extra routes, missing routes, or altered fields is treated as custom.
 fn gemini_matches_migratable_default(profile: &serde_json::Value) -> bool {
+    // Expected route keys
+    const EXPECTED_ROUTES: [&str; 3] = ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"];
+
     // 1. Initial default: Opus=3.1 Pro Preview/high, Sonnet=3.7 Flash/high, Haiku=3.5 Flash Lite/low
     const INITIAL_DEFAULT: [(&str, &str, &str); 3] = [
         ("claude-opus-5", "google/gemini-3.1-pro-preview", "high"),
@@ -1777,21 +1780,40 @@ fn gemini_matches_migratable_default(profile: &serde_json::Value) -> bool {
         ("claude-haiku-4-5", "google/gemini-3.5-flash-lite", "low"),
     ];
 
-    // 2. Interim default: Opus=3.7 Flash/high, Sonnet=3.7 Flash/high, Haiku=3.7 Flash/low
-    const INTERIM_DEFAULT: [(&str, &str, &str); 3] = [
+    // 2. Interim default (High/High/Low): Opus=3.7 Flash/high, Sonnet=3.7 Flash/high, Haiku=3.7 Flash/low
+    const INTERIM_DEFAULT_A: [(&str, &str, &str); 3] = [
         ("claude-opus-5", "google/gemini-3.7-flash", "high"),
         ("claude-sonnet-5", "google/gemini-3.7-flash", "high"),
         ("claude-haiku-4-5", "google/gemini-3.7-flash", "low"),
     ];
 
-    let matches_pattern = |pattern: &[(&str, &str, &str); 3]| -> bool {
-        let Some(model_map) = profile.get("model_map").and_then(serde_json::Value::as_object) else {
-            return false;
-        };
-        let Some(models) = profile.get("models").and_then(serde_json::Value::as_object) else {
-            return false;
-        };
+    // 3. Interim default (High/Medium/Low): Opus=3.7 Flash/high, Sonnet=3.7 Flash/medium, Haiku=3.7 Flash/low
+    const INTERIM_DEFAULT_B: [(&str, &str, &str); 3] = [
+        ("claude-opus-5", "google/gemini-3.7-flash", "high"),
+        ("claude-sonnet-5", "google/gemini-3.7-flash", "medium"),
+        ("claude-haiku-4-5", "google/gemini-3.7-flash", "low"),
+    ];
 
+    let Some(model_map) = profile.get("model_map").and_then(serde_json::Value::as_object) else {
+        return false;
+    };
+    let Some(models) = profile.get("models").and_then(serde_json::Value::as_object) else {
+        return false;
+    };
+
+    // Exact count check: must have exactly 3 routes
+    if model_map.len() != EXPECTED_ROUTES.len() || models.len() != EXPECTED_ROUTES.len() {
+        return false;
+    }
+
+    // Exact key set check
+    for route in &EXPECTED_ROUTES {
+        if !model_map.contains_key(*route) || !models.contains_key(*route) {
+            return false;
+        }
+    }
+
+    let matches_pattern = |pattern: &[(&str, &str, &str); 3]| -> bool {
         for (route, upstream, effort) in pattern {
             if model_map.get(*route).and_then(serde_json::Value::as_str) != Some(*upstream) {
                 return false;
@@ -1805,11 +1827,14 @@ fn gemini_matches_migratable_default(profile: &serde_json::Value) -> bool {
             if entry.get("reasoning_effort").and_then(serde_json::Value::as_str) != Some(*effort) {
                 return false;
             }
+            if entry.get("thinking_mode").and_then(serde_json::Value::as_str) != Some("thinking") {
+                return false;
+            }
         }
         true
     };
 
-    matches_pattern(&INITIAL_DEFAULT) || matches_pattern(&INTERIM_DEFAULT)
+    matches_pattern(&INITIAL_DEFAULT) || matches_pattern(&INTERIM_DEFAULT_A) || matches_pattern(&INTERIM_DEFAULT_B)
 }
 
 const GPT56_BALANCED_PROFILE_ID: &str = "e0e0f000-0000-4000-8000-000000000005";
@@ -8217,19 +8242,19 @@ mod tests {
         assert_eq!(profile.id, GEMINI_PROFILE_ID);
 
         let opus = &profile.models["claude-opus-5"];
-        assert_eq!(opus.upstream_model, "google/gemini-3.7-flash");
+        assert_eq!(opus.upstream_model, "google/gemini-3.8-flash");
         assert_eq!(opus.thinking_mode.as_deref(), Some("thinking"));
         assert_eq!(opus.reasoning_effort.as_deref(), Some("high"));
         assert!(!opus.force_thinking.unwrap());
 
         let sonnet = &profile.models["claude-sonnet-5"];
-        assert_eq!(sonnet.upstream_model, "google/gemini-3.7-flash");
+        assert_eq!(sonnet.upstream_model, "google/gemini-3.8-flash");
         assert_eq!(sonnet.thinking_mode.as_deref(), Some("thinking"));
         assert_eq!(sonnet.reasoning_effort.as_deref(), Some("medium"));
         assert!(!sonnet.force_thinking.unwrap());
 
         let haiku = &profile.models["claude-haiku-4-5"];
-        assert_eq!(haiku.upstream_model, "google/gemini-3.7-flash");
+        assert_eq!(haiku.upstream_model, "google/gemini-3.8-flash");
         assert_eq!(haiku.thinking_mode.as_deref(), Some("thinking"));
         assert_eq!(haiku.reasoning_effort.as_deref(), Some("low"));
         assert!(!haiku.force_thinking.unwrap());
@@ -8267,7 +8292,7 @@ mod tests {
         })
     }
 
-    fn interim_gemini_default_profile() -> serde_json::Value {
+    fn interim_gemini_default_profile_a() -> serde_json::Value {
         json!({
             "id": GEMINI_PROFILE_ID,
             "display_name": GEMINI_PROFILE_NAME,
@@ -8287,6 +8312,36 @@ mod tests {
                     "upstream_model": "google/gemini-3.7-flash",
                     "thinking_mode": "thinking",
                     "reasoning_effort": "high"
+                },
+                "claude-haiku-4-5": {
+                    "upstream_model": "google/gemini-3.7-flash",
+                    "thinking_mode": "thinking",
+                    "reasoning_effort": "low"
+                }
+            }
+        })
+    }
+
+    fn interim_gemini_default_profile_b() -> serde_json::Value {
+        json!({
+            "id": GEMINI_PROFILE_ID,
+            "display_name": GEMINI_PROFILE_NAME,
+            "model_map": {
+                "claude-opus-5": "google/gemini-3.7-flash",
+                "claude-sonnet-5": "google/gemini-3.7-flash",
+                "claude-haiku-4-5": "google/gemini-3.7-flash"
+            },
+            "visible_models": ["claude-opus-5", "claude-sonnet-5", "claude-haiku-4-5"],
+            "models": {
+                "claude-opus-5": {
+                    "upstream_model": "google/gemini-3.7-flash",
+                    "thinking_mode": "thinking",
+                    "reasoning_effort": "high"
+                },
+                "claude-sonnet-5": {
+                    "upstream_model": "google/gemini-3.7-flash",
+                    "thinking_mode": "thinking",
+                    "reasoning_effort": "medium"
                 },
                 "claude-haiku-4-5": {
                     "upstream_model": "google/gemini-3.7-flash",
@@ -8326,18 +8381,19 @@ mod tests {
         let profiles = result["providers"]["openrouter"]["profiles"]
             .as_array()
             .unwrap();
-        assert_eq!(gemini_route_upstream(profiles, "claude-opus-5"), "google/gemini-3.7-flash");
+        assert_eq!(gemini_route_upstream(profiles, "claude-opus-5"), "google/gemini-3.8-flash");
         assert_eq!(gemini_route_effort(profiles, "claude-opus-5"), "high");
-        assert_eq!(gemini_route_upstream(profiles, "claude-sonnet-5"), "google/gemini-3.7-flash");
+        assert_eq!(gemini_route_upstream(profiles, "claude-sonnet-5"), "google/gemini-3.8-flash");
         assert_eq!(gemini_route_effort(profiles, "claude-sonnet-5"), "medium");
-        assert_eq!(gemini_route_upstream(profiles, "claude-haiku-4-5"), "google/gemini-3.7-flash");
+        assert_eq!(gemini_route_upstream(profiles, "claude-haiku-4-5"), "google/gemini-3.8-flash");
         assert_eq!(gemini_route_effort(profiles, "claude-haiku-4-5"), "low");
     }
 
     #[test]
-    fn gemini_interim_default_is_migrated_to_current_default() {
+    fn gemini_interim_defaults_are_migrated_to_current_default() {
+        // Test Interim A (High/High/Low)
         let dir = TempDir::new().unwrap();
-        let cfg = make_openrouter_config_with_profiles(vec![interim_gemini_default_profile()], None);
+        let cfg = make_openrouter_config_with_profiles(vec![interim_gemini_default_profile_a()], None);
         write_config(dir.path(), &cfg);
 
         let path = dir.path().join("config.json");
@@ -8347,12 +8403,42 @@ mod tests {
         let profiles = result["providers"]["openrouter"]["profiles"]
             .as_array()
             .unwrap();
-        assert_eq!(gemini_route_upstream(profiles, "claude-opus-5"), "google/gemini-3.7-flash");
+        assert_eq!(gemini_route_upstream(profiles, "claude-opus-5"), "google/gemini-3.8-flash");
         assert_eq!(gemini_route_effort(profiles, "claude-opus-5"), "high");
-        assert_eq!(gemini_route_upstream(profiles, "claude-sonnet-5"), "google/gemini-3.7-flash");
+        assert_eq!(gemini_route_upstream(profiles, "claude-sonnet-5"), "google/gemini-3.8-flash");
         assert_eq!(gemini_route_effort(profiles, "claude-sonnet-5"), "medium");
-        assert_eq!(gemini_route_upstream(profiles, "claude-haiku-4-5"), "google/gemini-3.7-flash");
+        assert_eq!(gemini_route_upstream(profiles, "claude-haiku-4-5"), "google/gemini-3.8-flash");
         assert_eq!(gemini_route_effort(profiles, "claude-haiku-4-5"), "low");
+
+        // Test Interim B (High/Medium/Low)
+        let dir_b = TempDir::new().unwrap();
+        let cfg_b = make_openrouter_config_with_profiles(vec![interim_gemini_default_profile_b()], None);
+        write_config(dir_b.path(), &cfg_b);
+
+        let path_b = dir_b.path().join("config.json");
+        assert!(migrate_gemini_profile_to_current_default(&path_b));
+
+        let result_b = read_config(dir_b.path());
+        let profiles_b = result_b["providers"]["openrouter"]["profiles"]
+            .as_array()
+            .unwrap();
+        assert_eq!(gemini_route_upstream(profiles_b, "claude-opus-5"), "google/gemini-3.8-flash");
+        assert_eq!(gemini_route_effort(profiles_b, "claude-opus-5"), "high");
+        assert_eq!(gemini_route_upstream(profiles_b, "claude-sonnet-5"), "google/gemini-3.8-flash");
+        assert_eq!(gemini_route_effort(profiles_b, "claude-sonnet-5"), "medium");
+        assert_eq!(gemini_route_upstream(profiles_b, "claude-haiku-4-5"), "google/gemini-3.8-flash");
+        assert_eq!(gemini_route_effort(profiles_b, "claude-haiku-4-5"), "low");
+    }
+
+    #[test]
+    fn gemini_already_new_default_is_noop() {
+        let dir = TempDir::new().unwrap();
+        let default_profile = serde_json::to_value(build_gemini_profile(GEMINI_PROFILE_NAME)).unwrap();
+        let cfg = make_openrouter_config_with_profiles(vec![default_profile], None);
+        write_config(dir.path(), &cfg);
+
+        let path = dir.path().join("config.json");
+        assert!(!migrate_gemini_profile_to_current_default(&path));
     }
 
     #[test]
@@ -8381,7 +8467,7 @@ mod tests {
     #[test]
     fn gemini_user_customized_effort_is_left_untouched() {
         let dir = TempDir::new().unwrap();
-        let mut profile = interim_gemini_default_profile();
+        let mut profile = interim_gemini_default_profile_a();
         // User customized Sonnet reasoning effort to "low" instead of default
         profile["models"]["claude-sonnet-5"]["reasoning_effort"] = json!("low");
         let cfg = make_openrouter_config_with_profiles(vec![profile], None);
@@ -8399,12 +8485,39 @@ mod tests {
     }
 
     #[test]
-    fn gemini_already_new_default_is_noop() {
+    fn gemini_profile_with_extra_model_map_entry_is_not_migrated() {
         let dir = TempDir::new().unwrap();
-        let cfg = make_openrouter_config_with_profiles(
-            vec![build_gemini_profile_json(GEMINI_PROFILE_NAME)],
-            None,
-        );
+        let mut profile = interim_gemini_default_profile_b();
+        profile["model_map"]["claude-custom-route"] = json!("google/gemini-3.7-flash");
+        let cfg = make_openrouter_config_with_profiles(vec![profile], None);
+        write_config(dir.path(), &cfg);
+
+        let path = dir.path().join("config.json");
+        assert!(!migrate_gemini_profile_to_current_default(&path));
+    }
+
+    #[test]
+    fn gemini_profile_with_extra_models_entry_is_not_migrated() {
+        let dir = TempDir::new().unwrap();
+        let mut profile = interim_gemini_default_profile_b();
+        profile["models"]["claude-custom-route"] = json!({
+            "upstream_model": "google/gemini-3.7-flash",
+            "thinking_mode": "thinking",
+            "reasoning_effort": "high"
+        });
+        let cfg = make_openrouter_config_with_profiles(vec![profile], None);
+        write_config(dir.path(), &cfg);
+
+        let path = dir.path().join("config.json");
+        assert!(!migrate_gemini_profile_to_current_default(&path));
+    }
+
+    #[test]
+    fn gemini_profile_with_altered_thinking_mode_is_not_migrated() {
+        let dir = TempDir::new().unwrap();
+        let mut profile = interim_gemini_default_profile_b();
+        profile["models"]["claude-opus-5"]["thinking_mode"] = json!("normal");
+        let cfg = make_openrouter_config_with_profiles(vec![profile], None);
         write_config(dir.path(), &cfg);
 
         let path = dir.path().join("config.json");

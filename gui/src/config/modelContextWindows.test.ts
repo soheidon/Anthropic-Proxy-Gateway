@@ -124,4 +124,8 @@ describe("model_context_windows.json coverage", () => {
       expect(resolveWindow("openrouter", model)).toBe(262_144);
     }
   });
+
+  it("gemini 3.8 flash is 1048576 tokens", () => {
+    expect(resolveWindow("openrouter", "google/gemini-3.8-flash")).toBe(1_048_576);
+  });
 });

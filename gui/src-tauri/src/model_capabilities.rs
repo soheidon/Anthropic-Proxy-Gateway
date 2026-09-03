@@ -241,7 +241,9 @@ pub fn try_resolve_static_model_capabilities(upstream_model: &str) -> Option<Mod
         }),
         // ── Google Gemini (OpenRouter) ──
         // Initial static capabilities: image-capable, reasoning mandatory in UI.
-        "google/gemini-3.1-pro-preview" | "google/gemini-3.7-flash"
+        "google/gemini-3.1-pro-preview"
+        | "google/gemini-3.7-flash"
+        | "google/gemini-3.8-flash"
         | "google/gemini-3.5-flash-lite" => Some(ModelCapabilities {
             supports_image_url: true,
             supports_image_base64: true,
@@ -463,6 +465,7 @@ pub fn is_gemini_model(model: &str) -> bool {
         model,
         "google/gemini-3.1-pro-preview"
             | "google/gemini-3.7-flash"
+            | "google/gemini-3.8-flash"
             | "google/gemini-3.5-flash-lite"
     )
 }
@@ -756,12 +759,13 @@ mod tests {
     fn is_gemini_model_returns_true_for_supported_ids() {
         assert!(is_gemini_model("google/gemini-3.1-pro-preview"));
         assert!(is_gemini_model("google/gemini-3.7-flash"));
+        assert!(is_gemini_model("google/gemini-3.8-flash"));
         assert!(is_gemini_model("google/gemini-3.5-flash-lite"));
     }
 
     #[test]
     fn is_gemini_model_returns_false_for_other_models() {
-        assert!(!is_gemini_model("google/gemini-3.8-flash"));
+        assert!(!is_gemini_model("google/gemini-2.5-flash"));
         assert!(!is_gemini_model("openai/gpt-5.6-sol"));
         assert!(!is_gemini_model(""));
     }
@@ -771,6 +775,7 @@ mod tests {
         for id in &[
             "google/gemini-3.1-pro-preview",
             "google/gemini-3.7-flash",
+            "google/gemini-3.8-flash",
             "google/gemini-3.5-flash-lite",
         ] {
             let caps = resolve_static_model_capabilities(id);
@@ -780,6 +785,7 @@ mod tests {
             assert!(caps.supports_image_base64, "supports_image_base64 should be true for {}", id);
             assert!(!caps.supports_video_url, "supports_video_url should be false for {}", id);
             assert!(!caps.supports_video_base64, "supports_video_base64 should be false for {}", id);
+            assert!(is_gemini_model(id), "is_gemini_model should be true for {}", id);
         }
     }
     // ── OpenAI GPT-5.6 tests ────────────────────────────────────────

@@ -69,6 +69,24 @@ describe("DeepSeek production pricing data", () => {
   });
 });
 
+describe("Gemini 3.8 Flash production pricing data", () => {
+  it("defines standard list pricing without promotional distortion", () => {
+    const gemini38 = BUILTIN_OPENROUTER_MODELS["google/gemini-3.8-flash"];
+    expect(gemini38).toBeDefined();
+    expect(gemini38.displayName).toBe("Gemini 3.8 Flash");
+    expect(gemini38.pricing).toEqual({
+      inputPerMillionUsd: 0.75,
+      outputPerMillionUsd: 3.75,
+      cacheReadPerMillionUsd: 0.075,
+    });
+    expect(gemini38.capabilities.forcedThinkingOptions).toEqual([
+      "low",
+      "medium",
+      "high",
+    ]);
+  });
+});
+
 export { GPT56_IDS };
 
 // This file intentionally imports the production modules directly; it must not use the global builtinOpenRouter test mock.

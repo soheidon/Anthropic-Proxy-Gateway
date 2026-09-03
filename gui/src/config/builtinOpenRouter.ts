@@ -307,6 +307,32 @@ export const BUILTIN_OPENROUTER_MODELS: Record<string, BuiltinOpenRouterEntry> =
       regularCacheReadPerMillionUsd: 0.03,
     },
   },
+  "google/gemini-3.8-flash": {
+    displayName: "Gemini 3.8 Flash",
+    vendor: "Google",
+    pricingNoteKeys: [
+      "modelPricing.notes.openrouterPricing",
+    ],
+    pricingUpdatedAt: "2026-09-02",
+    capabilities: {
+      supports_vision: true,
+      supports_video: false,
+      supports_image_url: true,
+      supports_image_base64: true,
+      supports_video_url: false,
+      supports_video_base64: false,
+      force_thinking: false,
+      thinking: "reasoning_effort",
+      thinkingModePolicy: "forced",
+      supportsReasoningEffort: true,
+      forcedThinkingOptions: ["low", "medium", "high"],
+    },
+    pricing: {
+      inputPerMillionUsd: 0.75,
+      outputPerMillionUsd: 3.75,
+      cacheReadPerMillionUsd: 0.075,
+    },
+  },
   // ── OpenAI GPT-5.6 ──
   // Context length: ~1.05M tokens across all variants (OpenRouter metadata).
   // Static fallback prices for offline display.
