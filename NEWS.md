@@ -1,5 +1,14 @@
 # Anthro Bridge — Release Notes
 
+## v0.21.2 — 2026-09-04
+
+### Anthro-Review
+
+- Clarified that local test execution during `/anthro-review` evidence collection is not subject to the exactly-once rule.
+- Targeted tests, regression tests, full suites, package validation, reproducibility checks, RNG/deterministic-seed tests, statistical-invariance checks, and serial/parallel equivalence checks may be run iteratively as needed before review.
+- The exactly-once rule continues to apply only to a successful usable `anthro-bridge/review` tool call.
+- The existing single recovery retry for failed or unusable review calls remains unchanged.
+
 ## v0.21.1 — 2026-09-04
 
 ### Fixes
