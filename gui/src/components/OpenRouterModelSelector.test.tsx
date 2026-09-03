@@ -1069,6 +1069,7 @@ describe("OpenRouterModelSelector — regression tests", () => {
         models: [
           makeModel("google/gemini-3.1-pro-preview", "Google: Gemini 3.1 Pro Preview"),
           makeModel("google/gemini-3.7-flash", "Google: Gemini 3.7 Flash"),
+          makeModel("google/gemini-3.8-flash", "Google: Gemini 3.8 Flash"),
           makeModel("google/gemini-3.5-flash-lite", "Google: Gemini 3.5 Flash Lite"),
           makeModel("google/gemini-3.7-flash:batch", "Google: Gemini 3.7 Flash Batch"),
           makeModel("poolside/laguna-s-2.1", "Poolside: Laguna S 2.1"),
@@ -1104,10 +1105,11 @@ describe("OpenRouterModelSelector — regression tests", () => {
         .map((opt) => opt.value)
         .filter(Boolean);
 
-      // Curated built-in group must contain only the 2 official models
+      // Curated built-in group must contain only official curated models
       expect(optionValues).toEqual([
         "google/gemini-3.1-pro-preview",
         "google/gemini-3.7-flash",
+        "google/gemini-3.8-flash",
       ]);
       expect(optionValues).not.toContain("google/gemini-3.5-flash-lite");
       expect(optionValues).not.toContain("google/gemini-3.7-flash:batch");
@@ -1144,9 +1146,46 @@ describe("OpenRouterModelSelector — regression tests", () => {
       // Other mode must NOT restrict Google models to curated allow-list
       expect(optionValues).toContain("google/gemini-3.1-pro-preview");
       expect(optionValues).toContain("google/gemini-3.7-flash");
+      expect(optionValues).toContain("google/gemini-3.8-flash");
       expect(optionValues).toContain("google/gemini-3.5-flash-lite");
       expect(optionValues).toContain("google/gemini-3.7-flash:batch");
-      expect(optionValues).toHaveLength(4);
+      expect(optionValues).toHaveLength(5);
     });
+
+    it("renders exactly 3 reasoning options (Low, Medium, High) for Gemini 3.8 Flash", async () => {
+      invokeMock.mockImplementation(async (cmd: string) => {
+        if (cmd === "openrouter_get_models") return googleModelsResult();
+        if (cmd === "set_model_upstream") return saveOkResponse(false);
+        return null;
+      });
+
+      render(
+        <OpenRouterModelSelector
+          {...DEFAULT_PROPS}
+          currentUpstream="google/gemini-3.8-flash"
+          currentThinkingMode="thinking"
+          currentReasoningEffort="high"
+        />,
+      );
+      await waitForReady();
+
+      const thinkingSelect = screen.getByRole("combobox", {
+        name: "Thinking",
+      }) as HTMLSelectElement;
+
+      const options = Array.from(thinkingSelect.options).map((opt) => ({
+        value: opt.value,
+        text: opt.text,
+      }));
+
+      expect(options).toEqual([
+        { value: "low", text: "Thinking: Low" },
+        { value: "medium", text: "Thinking: Medium" },
+        { value: "high", text: "Thinking: High" },
+      ]);
+      expect(options).toHaveLength(3);
+      expect(thinkingSelect.value).toBe("high");
+    });
+
   });
 });

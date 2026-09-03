@@ -236,7 +236,7 @@ export const PROVIDER_MODELS: Record<string, string[]> = {
   openrouter: [
     "poolside/laguna-s-2.1", "poolside/laguna-xs-2.1", "tencent/hy3",
     "inclusionai/ring-2.6-1t", "inclusionai/ling-2.6-1t", "inclusionai/ling-2.6-flash",
-    "google/gemini-3.1-pro-preview", "google/gemini-3.7-flash",
+    "google/gemini-3.1-pro-preview", "google/gemini-3.7-flash", "google/gemini-3.8-flash",
     "stepfun/step-3.7-flash", "stepfun/step-3.5-flash",
     "openai/gpt-5.6-sol", "openai/gpt-5.6-sol-pro",
     "openai/gpt-5.6-terra", "openai/gpt-5.6-terra-pro",

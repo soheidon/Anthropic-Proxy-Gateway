@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import TitleBar from "./TitleBar";
+import { version } from "../../package.json";
+import tauriConf from "../../src-tauri/tauri.conf.json";
 
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({
@@ -36,7 +38,7 @@ describe("TitleBar Component", () => {
     expect(screen.getByRole("button", { name: /header\.settings/i })).toBeInTheDocument();
 
     // Version
-    expect(screen.getByText("v0.20.0")).toBeInTheDocument();
+    expect(screen.getByText(`v${version}`)).toBeInTheDocument();
 
     // No old right-side button or close toggle
     expect(screen.queryByRole("button", { name: /header\.settingsClose/i })).not.toBeInTheDocument();
@@ -111,4 +113,9 @@ describe("TitleBar Component", () => {
     expect(screen.getByRole("button", { name: /最大化/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /閉じる/i })).toBeInTheDocument();
   });
+
+  it("keeps tauri.conf.json version consistent with package.json", () => {
+    expect(tauriConf.version).toBe(version);
+  });
 });
+

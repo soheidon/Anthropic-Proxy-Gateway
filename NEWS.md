@@ -1,5 +1,14 @@
 # Anthro Bridge — Release Notes
 
+## v0.21.1 — 2026-09-04
+
+### Fixes
+
+- Fixed the empty reasoning mode selector for Google Gemini 3.8 Flash in OpenRouter profiles.
+- Added Gemini 3.8 Flash to the frontend OpenRouter model capability registry and test fixtures.
+- Fixed the GUI version label so it matches the installed application version.
+- Added regression coverage for Gemini 3.8 Flash reasoning options and version display consistency.
+
 ## v0.21.0 — 2026-09-03
 
 ### Anthro-Review

@@ -1,6 +1,6 @@
 {
   "productName": "Anthro Bridge",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "identifier": "com.soheidon.anthro-bridge",
   "build": {
     "frontendDist": "../dist",

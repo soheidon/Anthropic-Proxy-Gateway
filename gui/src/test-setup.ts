@@ -353,6 +353,26 @@ vi.mock("./config/builtinOpenRouter", () => {
         forcedThinkingOptions: ["low", "medium", "high"],
       },
     },
+    "google/gemini-3.8-flash": {
+      displayName: "Gemini 3.8 Flash",
+      vendor: "google",
+      pricingUpdatedAt: "2026-09-02",
+      pricing: {
+        inputPerMillionUsd: 0.75,
+        outputPerMillionUsd: 3.75,
+        cacheReadPerMillionUsd: 0.075,
+      },
+      pricingNoteKeys: ["modelPricing.notes.openrouterPricing"],
+      capabilities: {
+        supports_vision: true,
+        supports_video: false,
+        force_thinking: false,
+        thinking: "reasoning_effort",
+        thinkingModePolicy: "forced",
+        supportsReasoningEffort: true,
+        forcedThinkingOptions: ["low", "medium", "high"],
+      },
+    },
     "openrouter/auto": {
       displayName: "Auto",
       vendor: "openrouter",

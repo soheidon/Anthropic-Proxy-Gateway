@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useTranslation } from "../i18n";
+import { version } from "../../package.json";
 
 interface TitleBarProps {
   activeTab?: "gateway" | "mcp" | "settings";
@@ -137,7 +138,7 @@ export default function TitleBar({
               {t("header.settings")}
             </button>
 
-            <span className="version-info titlebar-version">v0.20.0</span>
+            <span className="version-info titlebar-version">v{version}</span>
           </div>
         )}
       </div>

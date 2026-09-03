@@ -149,9 +149,13 @@ const STEP_3_5_IDS = new Set(["stepfun/step-3.5-flash"]);
 const GOOGLE_VENDOR = BUILTIN_OPENROUTER_VENDORS.find((v) => v.id === "google")!;
 const GOOGLE_MODEL_IDS = new Set(GOOGLE_VENDOR.models.map((m) => m.id));
 const GEMINI_MODEL_IDS = GOOGLE_MODEL_IDS;
-const GEMINI_3_1_7_IDS = new Set(["google/gemini-3.1-pro-preview", "google/gemini-3.7-flash"]);
+const GEMINI_THINKING_MODEL_IDS = new Set([
+  "google/gemini-3.1-pro-preview",
+  "google/gemini-3.7-flash",
+  "google/gemini-3.8-flash",
+]);
 const GEMINI_SUPPORTED_THINKING = new Map<string, Set<ThinkingSelection>>();
-for (const id of GEMINI_3_1_7_IDS) GEMINI_SUPPORTED_THINKING.set(id, new Set<ThinkingSelection>(["low", "medium", "high"]));
+for (const id of GEMINI_THINKING_MODEL_IDS) GEMINI_SUPPORTED_THINKING.set(id, new Set<ThinkingSelection>(["low", "medium", "high"]));
 const OPENAI_VENDOR = BUILTIN_OPENROUTER_VENDORS.find((v) => v.id === "openai")!;
 const OPENAI_MODEL_IDS = new Set(OPENAI_VENDOR.models.map((m) => m.id));
 
