@@ -3561,8 +3561,12 @@ Review an implementation against its approved implementation plan using the Anth
    - Read adjacent source files, contract boundaries, caller/callee invariants, or surrounding repository context when required to understand invariants.
    - Distill the relevant findings into `additional_context`. Never assume repository files inspected by the host agent are automatically visible to the external reviewer model.
 4. Collect test results:
-   - Run or gather test outputs (`cargo test`, `npm test`, etc.) unless the change is documentation-only.
+   - Local test execution is not subject to the exactly-once rule.
+   - Run targeted tests, regression tests, full test suites, package/build validation (`R CMD check`, `cargo test`, `npm test/build`), statistical-invariance checks, reproducibility checks, RNG/deterministic-seed tests, serial/parallel equivalence checks, or other domain-appropriate verification as many times as necessary to collect sufficient review evidence.
+   - Tests may be run iteratively: results from one test may justify running additional focused checks before the final review evidence is assembled.
+   - For documentation-only changes, testing may be omitted if code logic and packaging invariants are unaffected.
 5. Call `anthro-bridge/review`:
+   - The exactly-once rule applies strictly to `anthro-bridge/review` tool calls, not to local test execution or evidence collection.
    - Call `anthro-bridge/review` exactly once upon receipt of a usable verdict.
    - A usable verdict must contain one of the following consistent pairs:
      - `Decision: Approved` with `Commit readiness: READY`

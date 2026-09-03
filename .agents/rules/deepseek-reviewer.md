@@ -13,8 +13,9 @@ For non-trivial implementation tasks in this repository before requesting commit
 4. Collect all tracked changes relative to HEAD using `git diff HEAD`.
 5. For all review-relevant untracked files (source, tests, configs, scripts, resources, docs), read their contents and include them as synthetic diff blocks (`--- UNTRACKED FILE: <path> ---`). For large binaries or generated files, provide path, type, size, and reason for omission. Never silently truncate diff evidence.
 6. If contract boundaries, caller/callee invariants, or surrounding repository context were inspected, distill them into `additional_context`.
-7. Collect automated test execution results (`cargo test`, `npm test`).
+7. Collect automated test execution results. Local test execution is not subject to the exactly-once rule: run targeted tests, regression tests, full suites, package validations, or domain-specific invariant/reproducibility checks iteratively as needed to assemble complete review evidence.
 8. Call `anthro-bridge/review` to obtain the independent review verdict:
+   - The exactly-once rule applies strictly to `anthro-bridge/review` tool calls, not to local test execution.
    - Duplicate review calls are prohibited once a usable verdict is obtained.
    - If a transport or decoding failure occurs, exactly 1 recovery retry is permitted.
 9. Present the verdict to the user verbatim:
