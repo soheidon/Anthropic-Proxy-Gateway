@@ -63,12 +63,14 @@ export const translations = {
   "antigravity.savedMessage": "Saved",
 
   // Antigravity Commands (/anthro-plan & /anthro-revise)
-  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan & /anthro-revise)",
-  "antigravity.commandsDesc": "Registers global slash commands (/anthro-plan, /anthro-revise) to create and revise implementation plans in Antigravity.",
+  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan, /anthro-revise & /anthro-review)",
+  "antigravity.commandsDesc": "Registers global slash commands (/anthro-plan, /anthro-revise, /anthro-review) to create plans, revise plans, and review implementations in Antigravity.",
   "antigravity.commandPlanTitle": "/anthro-plan",
   "antigravity.commandPlanDesc": "Creates a new implementation plan from scratch.",
   "antigravity.commandReviseTitle": "/anthro-revise",
   "antigravity.commandReviseDesc": "Revises an existing implementation plan based on user feedback.",
+  "antigravity.commandReviewTitle": "/anthro-review",
+  "antigravity.commandReviewDesc": "Reviews an implementation against the approved plan and outputs a 3-tier verdict.",
   "antigravity.commandStatusInstalled": "Installed",
   "antigravity.commandStatusNotInstalled": "Not installed",
   "antigravity.commandStatusOutdated": "Modified / Different version detected",

@@ -37,8 +37,18 @@ fn plan_args(task: &str, context: &str) -> CallToolRequestParams {
     CallToolRequestParams::new("plan").with_arguments(args.as_object().unwrap().clone())
 }
 
+fn review_args(task: &str, plan: &str, diff: &str, status: &str) -> CallToolRequestParams {
+    let args = serde_json::json!({
+        "task": task,
+        "approved_plan": plan,
+        "git_diff": diff,
+        "git_status": status,
+    });
+    CallToolRequestParams::new("review").with_arguments(args.as_object().unwrap().clone())
+}
+
 #[tokio::test]
-async fn exposes_exactly_the_plan_tool() {
+async fn exposes_plan_and_review_tools() {
     let (server_transport, client_transport) = tokio::io::duplex(4096);
 
     let tool = PlannerTool::new(FakeProvider {
@@ -53,27 +63,31 @@ async fn exposes_exactly_the_plan_tool() {
     let client = DummyClientHandler.serve(client_transport).await.unwrap();
 
     let tools = client.list_all_tools().await.unwrap();
-    assert_eq!(tools.len(), 1);
+    assert_eq!(tools.len(), 2);
 
-    let tool = &tools[0];
-    assert_eq!(tool.name, "plan");
-    assert!(tool.description.as_ref().is_some_and(|d| !d.is_empty()));
+    // 1. Verify plan tool
+    let plan_tool = tools.iter().find(|t| t.name == "plan").expect("plan tool missing");
+    assert!(plan_tool.description.as_ref().is_some_and(|d| !d.is_empty()));
+    let plan_schema = &plan_tool.input_schema;
+    assert_eq!(plan_schema.get("type").and_then(|v| v.as_str()), Some("object"));
+    let plan_req = plan_schema.get("required").and_then(|v| v.as_array()).unwrap();
+    assert!(plan_req.contains(&serde_json::json!("task")));
+    assert!(plan_req.contains(&serde_json::json!("context")));
+    assert!(!plan_req.contains(&serde_json::json!("constraints")));
 
-    let schema = &tool.input_schema;
-    assert_eq!(schema.get("type").and_then(|v| v.as_str()), Some("object"));
-
-    let required = schema.get("required").and_then(|v| v.as_array()).unwrap();
-    assert!(required.contains(&serde_json::json!("task")));
-    assert!(required.contains(&serde_json::json!("context")));
-    assert!(!required.contains(&serde_json::json!("constraints")));
-
-    let properties = schema
-        .get("properties")
-        .and_then(|v| v.as_object())
-        .unwrap();
-    assert!(properties.contains_key("task"));
-    assert!(properties.contains_key("context"));
-    assert!(properties.contains_key("constraints"));
+    // 2. Verify review tool
+    let review_tool = tools.iter().find(|t| t.name == "review").expect("review tool missing");
+    assert!(review_tool.description.as_ref().is_some_and(|d| !d.is_empty()));
+    let review_schema = &review_tool.input_schema;
+    assert_eq!(review_schema.get("type").and_then(|v| v.as_str()), Some("object"));
+    let review_req = review_schema.get("required").and_then(|v| v.as_array()).unwrap();
+    assert!(review_req.contains(&serde_json::json!("task")));
+    assert!(review_req.contains(&serde_json::json!("approved_plan")));
+    assert!(review_req.contains(&serde_json::json!("git_diff")));
+    assert!(review_req.contains(&serde_json::json!("git_status")));
+    assert!(!review_req.contains(&serde_json::json!("test_results")));
+    assert!(!review_req.contains(&serde_json::json!("review_mode")));
+    assert!(!review_req.contains(&serde_json::json!("additional_context")));
 
     let _ = client.cancel().await;
 }
@@ -145,6 +159,158 @@ async fn provider_error_becomes_clean_mcp_error() {
 
     let err = client.call_tool(plan_args("t", "c")).await.unwrap_err();
     assert!(!err.to_string().contains("Bearer"));
+
+    let _ = client.cancel().await;
+}
+
+#[tokio::test]
+async fn valid_review_call_returns_verdict() {
+    let (server_transport, client_transport) = tokio::io::duplex(4096);
+
+    let tool = PlannerTool::new(FakeProvider {
+        text: "# Review Summary\n\nDecision: Approved\nCommit readiness: READY".into(),
+    });
+    tokio::spawn(async move {
+        if let Ok(service) = tool.serve(server_transport).await {
+            let _ = service.waiting().await;
+        }
+    });
+
+    let client = DummyClientHandler.serve(client_transport).await.unwrap();
+
+    let result = client
+        .call_tool(review_args("review task", "Plan content", "diff content", "M file.ts"))
+        .await
+        .unwrap();
+
+    assert_eq!(result.is_error, Some(false));
+    let text = result
+        .content
+        .first()
+        .and_then(|c| c.as_text())
+        .map(|t| t.text.as_str());
+    assert_eq!(text, Some("# Review Summary\n\nDecision: Approved\nCommit readiness: READY"));
+
+    let _ = client.cancel().await;
+}
+
+#[tokio::test]
+async fn review_requires_git_status_and_diff() {
+    let (server_transport, client_transport) = tokio::io::duplex(4096);
+
+    let tool = PlannerTool::new(FakeProvider {
+        text: "unused".into(),
+    });
+    tokio::spawn(async move {
+        if let Ok(service) = tool.serve(server_transport).await {
+            let _ = service.waiting().await;
+        }
+    });
+
+    let client = DummyClientHandler.serve(client_transport).await.unwrap();
+
+    // Empty git_status rejected
+    let err = client
+        .call_tool(review_args("task", "plan", "diff", "   "))
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("`git_status` must not be empty"));
+
+    // Empty git_diff rejected
+    let err = client
+        .call_tool(review_args("task", "plan", "  ", "M file.ts"))
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("`git_diff` must not be empty"));
+
+    let _ = client.cancel().await;
+}
+
+#[tokio::test]
+async fn review_three_tier_verdict_contract_test() {
+    let test_cases = vec![
+        (
+            "# Review Summary\n\n- Scope Compliance: Fully compliant\n\n## Decision\nDecision: Approved\nCommit readiness: READY\n",
+            "Decision: Approved",
+            "Commit readiness: READY",
+        ),
+        (
+            "# Review Summary\n\n- Scope Compliance: Fully compliant\n\n## Minor Recommendations (Non-blocking)\n- Consider renaming var `t` to `timer`\n\n## Decision\nDecision: Approved with recommendations\nCommit readiness: READY\n",
+            "Decision: Approved with recommendations",
+            "Commit readiness: READY",
+        ),
+        (
+            "# Review Summary\n\n- Scope Compliance: Violation detected\n\n## Blocking Issues\n- 1. Missing null check causes panic in edge case\n\n## Decision\nDecision: Not approved\nCommit readiness: NOT READY\n",
+            "Decision: Not approved",
+            "Commit readiness: NOT READY",
+        ),
+    ];
+
+    for (output_text, expected_decision, expected_readiness) in test_cases {
+        let (server_transport, client_transport) = tokio::io::duplex(4096);
+        let tool = PlannerTool::new(FakeProvider {
+            text: output_text.into(),
+        });
+        tokio::spawn(async move {
+            if let Ok(service) = tool.serve(server_transport).await {
+                let _ = service.waiting().await;
+            }
+        });
+
+        let client = DummyClientHandler.serve(client_transport).await.unwrap();
+
+        let result = client
+            .call_tool(review_args("task", "plan", "diff", "M file.ts"))
+            .await
+            .unwrap();
+
+        assert_eq!(result.is_error, Some(false));
+        let text = result
+            .content
+            .first()
+            .and_then(|c| c.as_text())
+            .map(|t| t.text.as_str())
+            .unwrap();
+
+        assert!(text.contains(expected_decision));
+        assert!(text.contains(expected_readiness));
+
+        let _ = client.cancel().await;
+    }
+}
+
+#[tokio::test]
+async fn review_validates_review_mode_parameter() {
+    let (server_transport, client_transport) = tokio::io::duplex(4096);
+
+    let tool = PlannerTool::new(FakeProvider {
+        text: "ok".into(),
+    });
+    tokio::spawn(async move {
+        if let Ok(service) = tool.serve(server_transport).await {
+            let _ = service.waiting().await;
+        }
+    });
+
+    let client = DummyClientHandler.serve(client_transport).await.unwrap();
+
+    // Unsupported mode rejected
+    let mut args = serde_json::json!({
+        "task": "task",
+        "approved_plan": "plan",
+        "git_diff": "diff",
+        "git_status": "M file.ts",
+        "review_mode": "strict"
+    });
+    let req = CallToolRequestParams::new("review").with_arguments(args.as_object().unwrap().clone());
+    let err = client.call_tool(req).await.unwrap_err();
+    assert!(err.to_string().contains("Invalid `review_mode`: 'strict'"));
+
+    // Supported deep mode accepted
+    args["review_mode"] = serde_json::json!("deep");
+    let req = CallToolRequestParams::new("review").with_arguments(args.as_object().unwrap().clone());
+    let res = client.call_tool(req).await.unwrap();
+    assert_eq!(res.is_error, Some(false));
 
     let _ = client.cancel().await;
 }

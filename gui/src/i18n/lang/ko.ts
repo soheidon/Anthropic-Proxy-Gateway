@@ -65,12 +65,14 @@ export const translations: TranslationMap = {
   "antigravity.savedMessage": "저장됨",
 
   // Antigravity Commands (/anthro-plan & /anthro-revise)
-  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan & /anthro-revise)",
-  "antigravity.commandsDesc": "모든 Antigravity 워크스페이스에서 구현 계획을 생성하고 수정할 수 있는 전역 슬래시 명령어(/anthro-plan, /anthro-revise)를 등록하고 관리합니다.",
+  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan, /anthro-revise & /anthro-review)",
+  "antigravity.commandsDesc": "모든 Antigravity 워크스페이스에서 구현 계획을 생성하고 수정할 수 있는 전역 슬래시 명령어(/anthro-plan, /anthro-revise, /anthro-review)를 등록하고 관리합니다.",
   "antigravity.commandPlanTitle": "/anthro-plan",
   "antigravity.commandPlanDesc": "처음부터 새로운 구현 계획을 생성합니다.",
   "antigravity.commandReviseTitle": "/anthro-revise",
   "antigravity.commandReviseDesc": "사용자 피드백을 바탕으로 기존 구현 계획을 수정합니다.",
+  "antigravity.commandReviewTitle": "/anthro-review",
+  "antigravity.commandReviewDesc": "승인된 계획과 구현 차이점을 대조하여 3단계 판정을 출력합니다.",
   "antigravity.commandStatusInstalled": "설치됨",
   "antigravity.commandStatusNotInstalled": "미설치",
   "antigravity.commandStatusOutdated": "수정됨 또는 이전 버전 감지됨",

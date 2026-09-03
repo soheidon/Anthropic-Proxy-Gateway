@@ -44,3 +44,74 @@ fn user_prompt_omits_blank_constraints() {
     let prompt = build_user_prompt("task", "context", Some("   "));
     assert!(!prompt.contains("## Constraints"));
 }
+
+#[test]
+fn review_system_prompt_defines_read_only_and_verdicts() {
+    use anthro_bridge_mcp_server::mcp::build_review_system_prompt;
+
+    let prompt = build_review_system_prompt();
+    assert!(prompt.contains("read-only software implementation reviewer"));
+    assert!(prompt.contains("Decision: <Approved | Approved with recommendations | Not approved>"));
+    assert!(prompt.contains("Commit readiness: <READY | NOT READY>"));
+    assert!(prompt.contains("Tests passing are necessary but not sufficient for approval"));
+    assert!(prompt.contains("Scope compliance"));
+    assert!(prompt.contains("Plan compliance"));
+    assert!(prompt.contains("Contract preservation"));
+    assert!(prompt.contains("Determinism & RNG"));
+    assert!(prompt.contains("Concurrency & parallelism"));
+}
+
+#[test]
+fn review_user_prompt_formats_sections_reliably() {
+    use anthro_bridge_mcp_server::mcp::{build_review_user_prompt, ReviewParams};
+
+    let params = ReviewParams {
+        task: "Fix boundary condition in timer".to_string(),
+        approved_plan: "1. Add check\n2. Run tests".to_string(),
+        git_diff: "+ if x <= 0 { return; }".to_string(),
+        git_status: "M timer.rs".to_string(),
+        test_results: Some("3 tests passed".to_string()),
+        review_mode: Some("deep".to_string()),
+        additional_context: Some("Called by orchestrator.rs".to_string()),
+    };
+
+    let prompt = build_review_user_prompt(&params);
+    assert!(prompt.contains("## Task Summary\n\nFix boundary condition"));
+    assert!(prompt.contains("## Approved Implementation Plan\n\n1. Add check"));
+    assert!(prompt.contains("## Working Tree Status (git status)\n\nM timer.rs"));
+    assert!(prompt.contains("## Implementation Diff\n\n+ if x <= 0 { return; }"));
+    assert!(prompt.contains("## Test Results\n\n3 tests passed"));
+    assert!(prompt.contains("## Review Mode\n\ndeep"));
+    assert!(prompt.contains("## Additional Repository Context & Contracts\n\nCalled by orchestrator.rs"));
+}
+
+#[test]
+fn resolve_review_mode_handles_valid_and_invalid_modes() {
+    use anthro_bridge_mcp_server::mcp::resolve_review_mode;
+
+    // None -> standard
+    assert_eq!(resolve_review_mode(None).unwrap(), "standard");
+
+    // Blank -> standard
+    assert_eq!(resolve_review_mode(Some("")).unwrap(), "standard");
+    assert_eq!(resolve_review_mode(Some("   ")).unwrap(), "standard");
+
+    // standard -> standard (with trimming)
+    assert_eq!(resolve_review_mode(Some("standard")).unwrap(), "standard");
+    assert_eq!(resolve_review_mode(Some("  standard  ")).unwrap(), "standard");
+
+    // deep -> deep (with trimming)
+    assert_eq!(resolve_review_mode(Some("deep")).unwrap(), "deep");
+    assert_eq!(resolve_review_mode(Some("  deep  ")).unwrap(), "deep");
+
+    // Unsupported modes -> ErrorData invalid_params
+    let err1 = resolve_review_mode(Some("strict")).unwrap_err();
+    assert!(err1.message.contains("Invalid `review_mode`: 'strict'"));
+    assert!(err1.message.contains("Only 'standard' and 'deep' are supported."));
+
+    let err2 = resolve_review_mode(Some("max")).unwrap_err();
+    assert!(err2.message.contains("Invalid `review_mode`: 'max'"));
+
+    let err3 = resolve_review_mode(Some("careful")).unwrap_err();
+    assert!(err3.message.contains("Invalid `review_mode`: 'careful'"));
+}

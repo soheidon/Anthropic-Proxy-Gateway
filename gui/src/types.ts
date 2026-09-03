@@ -191,6 +191,7 @@ export interface AntigravityCommandsInfo {
   skills_dir: string;
   plan_command: AntigravityCommandItemInfo;
   revise_command: AntigravityCommandItemInfo;
+  review_command: AntigravityCommandItemInfo;
 }
 
 export interface GatewayConfig {

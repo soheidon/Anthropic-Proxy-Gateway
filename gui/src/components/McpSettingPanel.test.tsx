@@ -70,6 +70,13 @@ describe("McpSettingPanel - Antigravity Integration", () => {
             skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-revise\\SKILL.md",
             error: null,
           },
+          review_command: {
+            name: "anthro-review",
+            slash_command: "/anthro-review",
+            status: "not_installed",
+            skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-review\\SKILL.md",
+            error: null,
+          },
         } as AntigravityCommandsInfo;
       }
       if (cmd === "select_executable_dialog") {
@@ -258,6 +265,7 @@ describe("McpSettingPanel - Antigravity Integration", () => {
           skills_dir: "",
           plan_command: { name: "anthro-plan", status: "not_installed" },
           revise_command: { name: "anthro-revise", status: "not_installed" },
+          review_command: { name: "anthro-review", status: "not_installed" },
         };
       }
       if (cmd === "get_antigravity_mcp_status") {
@@ -312,7 +320,7 @@ describe("McpSettingPanel - Antigravity Integration", () => {
   });
 
   // ── Antigravity Commands Tests ──
-  it("renders Commands NotInstalled state with Install and Open Folder buttons", async () => {
+  it("renders Commands Not Installed state with Install buttons and InstallAll button", async () => {
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === "get_mcp_config") {
         return {
@@ -349,6 +357,13 @@ describe("McpSettingPanel - Antigravity Integration", () => {
             skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-revise\\SKILL.md",
             error: null,
           },
+          review_command: {
+            name: "anthro-review",
+            slash_command: "/anthro-review",
+            status: "not_installed",
+            skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-review\\SKILL.md",
+            error: null,
+          },
         };
       }
       return null;
@@ -362,8 +377,8 @@ describe("McpSettingPanel - Antigravity Integration", () => {
 
 
 
-    expect(screen.getAllByText(/antigravity\.commandStatusNotInstalled/i).length).toBe(2);
-    expect(screen.getAllByRole("button", { name: /antigravity\.commandBtnInstall/i }).length).toBe(2);
+    expect(screen.getAllByText(/antigravity\.commandStatusNotInstalled/i).length).toBe(3);
+    expect(screen.getAllByRole("button", { name: /antigravity\.commandBtnInstall/i }).length).toBe(3);
     expect(screen.getByRole("button", { name: /antigravity\.btnInstallAll/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /antigravity\.btnOpenSkillsFolder/i })).toBeInTheDocument();
   });
@@ -405,6 +420,13 @@ describe("McpSettingPanel - Antigravity Integration", () => {
             skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-revise\\SKILL.md",
             error: null,
           },
+          review_command: {
+            name: "anthro-review",
+            slash_command: "/anthro-review",
+            status: "installed",
+            skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-review\\SKILL.md",
+            error: null,
+          },
         };
       }
       return null;
@@ -418,9 +440,9 @@ describe("McpSettingPanel - Antigravity Integration", () => {
 
 
 
-    expect(screen.getAllByText(/antigravity\.commandStatusInstalled/i).length).toBe(2);
+    expect(screen.getAllByText(/antigravity\.commandStatusInstalled/i).length).toBe(3);
     expect(screen.getByRole("button", { name: /antigravity\.btnRemove/i })).toBeInTheDocument(); // MCP Remove button
-    expect(screen.getAllByRole("button", { name: /antigravity\.commandBtnRemove/i }).length).toBe(2); // Commands Remove buttons
+    expect(screen.getAllByRole("button", { name: /antigravity\.commandBtnRemove/i }).length).toBe(3); // Commands Remove buttons
     expect(screen.queryByRole("button", { name: /antigravity\.btnInstallAll/i })).not.toBeInTheDocument();
   });
 
@@ -461,6 +483,13 @@ describe("McpSettingPanel - Antigravity Integration", () => {
             skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-revise\\SKILL.md",
             error: null,
           },
+          review_command: {
+            name: "anthro-review",
+            slash_command: "/anthro-review",
+            status: "not_installed",
+            skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-review\\SKILL.md",
+            error: null,
+          },
         };
       }
       if (cmd === "install_all_antigravity_commands") {
@@ -478,6 +507,13 @@ describe("McpSettingPanel - Antigravity Integration", () => {
             slash_command: "/anthro-revise",
             status: "installed",
             skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-revise\\SKILL.md",
+            error: null,
+          },
+          review_command: {
+            name: "anthro-review",
+            slash_command: "/anthro-review",
+            status: "installed",
+            skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-review\\SKILL.md",
             error: null,
           },
         };
@@ -499,7 +535,7 @@ describe("McpSettingPanel - Antigravity Integration", () => {
 
     expect(invokeMock).toHaveBeenCalledWith("install_all_antigravity_commands");
     await waitFor(() => {
-      expect(screen.getAllByText(/antigravity\.commandStatusInstalled/i).length).toBe(2);
+      expect(screen.getAllByText(/antigravity\.commandStatusInstalled/i).length).toBe(3);
     });
   });
 
@@ -538,6 +574,13 @@ describe("McpSettingPanel - Antigravity Integration", () => {
             slash_command: "/anthro-revise",
             status: "installed",
             skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-revise\\SKILL.md",
+            error: null,
+          },
+          review_command: {
+            name: "anthro-review",
+            slash_command: "/anthro-review",
+            status: "installed",
+            skill_path: "C:\\Users\\User\\.gemini\\config\\skills\\anthro-review\\SKILL.md",
             error: null,
           },
         };

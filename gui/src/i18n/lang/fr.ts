@@ -65,12 +65,14 @@ export const translations: TranslationMap = {
   "antigravity.savedMessage": "Enregistré",
 
   // Antigravity Commands (/anthro-plan & /anthro-revise)
-  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan & /anthro-revise)",
-  "antigravity.commandsDesc": "Enregistre les commandes globales (/anthro-plan, /anthro-revise) pour créer et réviser des plans d'implémentation dans Antigravity.",
+  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan, /anthro-revise & /anthro-review)",
+  "antigravity.commandsDesc": "Enregistre les commandes globales (/anthro-plan, /anthro-revise, /anthro-review) pour créer et réviser des plans d'implémentation dans Antigravity.",
   "antigravity.commandPlanTitle": "/anthro-plan",
   "antigravity.commandPlanDesc": "Crée un nouveau plan d'implémentation complet.",
   "antigravity.commandReviseTitle": "/anthro-revise",
   "antigravity.commandReviseDesc": "Révise un plan d'implémentation existant selon les retours.",
+  "antigravity.commandReviewTitle": "/anthro-review",
+  "antigravity.commandReviewDesc": "Examine une implémentation par rapport au plan approuvé et émet un verdict à 3 niveaux.",
   "antigravity.commandStatusInstalled": "Installé",
   "antigravity.commandStatusNotInstalled": "Non installé",
   "antigravity.commandStatusOutdated": "Modification ou ancienne version détectée",

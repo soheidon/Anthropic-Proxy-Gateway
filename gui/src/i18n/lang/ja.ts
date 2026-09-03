@@ -65,12 +65,14 @@ export const translations: TranslationMap = {
   "antigravity.savedMessage": "保存完了",
 
   // Antigravity Commands (/anthro-plan & /anthro-revise)
-  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan & /anthro-revise)",
-  "antigravity.commandsDesc": "Antigravity の全ワークスペースから利用できるスラッシュコマンド (/anthro-plan, /anthro-revise) を登録・管理します。",
+  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan, /anthro-revise & /anthro-review)",
+  "antigravity.commandsDesc": "Antigravity の全ワークスペースから利用できるスラッシュコマンド (/anthro-plan, /anthro-revise, /anthro-review) を登録・管理します。",
   "antigravity.commandPlanTitle": "/anthro-plan",
   "antigravity.commandPlanDesc": "新しい実装計画を作成します。",
   "antigravity.commandReviseTitle": "/anthro-revise",
   "antigravity.commandReviseDesc": "現在の実装計画に対するフィードバックや修正を反映します。",
+  "antigravity.commandReviewTitle": "/anthro-review",
+  "antigravity.commandReviewDesc": "承認済み計画と実装差分を照合し、3段階の判定（Approved等）を出力します。",
   "antigravity.commandStatusInstalled": "インストール済み",
   "antigravity.commandStatusNotInstalled": "未インストール",
   "antigravity.commandStatusOutdated": "変更または旧バージョンを検出",

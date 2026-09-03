@@ -791,7 +791,8 @@ export default function McpSettingPanel({ config, refreshConfig }: McpSettingPan
                     {t("antigravity.btnOpenSkillsFolder")}
                   </button>
                   {((commandsInfo?.plan_command.status !== "installed") ||
-                    (commandsInfo?.revise_command.status !== "installed")) && (
+                    (commandsInfo?.revise_command.status !== "installed") ||
+                    (commandsInfo?.review_command.status !== "installed")) && (
                     <button
                       className="btn btn-primary"
                       style={{ fontSize: 11, padding: "4px 10px" }}
@@ -836,6 +837,13 @@ export default function McpSettingPanel({ config, refreshConfig }: McpSettingPan
                     descKey: "antigravity.commandReviseDesc" as const,
                     fallbackName: "anthro-revise",
                     fallbackCmd: "/anthro-revise",
+                  },
+                  {
+                    item: commandsInfo?.review_command,
+                    titleKey: "antigravity.commandReviewTitle" as const,
+                    descKey: "antigravity.commandReviewDesc" as const,
+                    fallbackName: "anthro-review",
+                    fallbackCmd: "/anthro-review",
                   },
                 ].map(({ item, titleKey, descKey, fallbackName, fallbackCmd }) => {
                   const cmdName = item?.name ?? fallbackName;

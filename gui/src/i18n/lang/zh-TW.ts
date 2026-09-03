@@ -65,12 +65,14 @@ export const translations: TranslationMap = {
   "antigravity.savedMessage": "已儲存",
 
   // Antigravity Commands (/anthro-plan & /anthro-revise)
-  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan & /anthro-revise)",
-  "antigravity.commandsDesc": "註冊全域斜線指令 (/anthro-plan, /anthro-revise)，在 Antigravity 中建立和修訂實作計畫。",
+  "antigravity.commandsSectionHeader": "Antigravity Commands (/anthro-plan, /anthro-revise & /anthro-review)",
+  "antigravity.commandsDesc": "註冊全域斜線指令 (/anthro-plan, /anthro-revise, /anthro-review)，在 Antigravity 中建立和修訂實作計畫。",
   "antigravity.commandPlanTitle": "/anthro-plan",
   "antigravity.commandPlanDesc": "從零開始建立新的實作計畫。",
   "antigravity.commandReviseTitle": "/anthro-revise",
   "antigravity.commandReviseDesc": "根據使用者回饋修訂現有的實作計畫。",
+  "antigravity.commandReviewTitle": "/anthro-review",
+  "antigravity.commandReviewDesc": "對照已批准的計畫審查實作差異，並輸出三級審查結論。",
   "antigravity.commandStatusInstalled": "已安裝",
   "antigravity.commandStatusNotInstalled": "未安裝",
   "antigravity.commandStatusOutdated": "偵測到修改或舊版本",

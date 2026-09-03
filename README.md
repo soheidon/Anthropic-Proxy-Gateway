@@ -94,12 +94,12 @@ The installer supports 8 languages (English, Japanese, Simplified Chinese, Tradi
    - **Claude Code**: Click **Copy Claude Code launch command** in Settings and paste it into PowerShell.
    - **Claude Desktop / Cowork**: Follow the [Claude Desktop 3P Setup Guide](docs/THIRD_PARTY_INFERENCE.md).
 
-### Workflow 2: MCP Planner for Google Antigravity
+### Workflow 2: MCP Planner & Reviewer for Google Antigravity
 
-1. Configure an API key for your chosen planner model in Anthro Bridge.
-2. Select the **MCP** tab in Anthro Bridge and configure your planner model in **Settings > MCP Plan Settings**.
-3. Register `anthro-bridge.exe` with `["--mcp-server"]` in Antigravity's MCP configuration.
-4. Invoke `anthro-bridge/plan` in Antigravity (or automate it with a workspace rule).
+1. Configure an API key for your chosen planner/reviewer model in Anthro Bridge.
+2. Select the **MCP** tab in Anthro Bridge and configure your model in **Settings > Antigravity > MCP Plan Settings**.
+3. Register `anthro-bridge.exe` with `["--mcp-server"]` in Antigravity's MCP configuration (or click **Configure Automatically** in Anthro Bridge).
+4. Use `/anthro-plan` to design plans, `/anthro-revise` to update plans, and `/anthro-review` to review implementations before commit.
 5. Follow the complete [Antigravity MCP Setup Guide](docs/ANTIGRAVITY_MCP.md).
 
 ---

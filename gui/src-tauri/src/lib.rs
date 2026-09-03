@@ -3508,6 +3508,57 @@ Revise an existing implementation plan based on user feedback using the Anthro B
 9. Stop after presenting the revised implementation plan.
 "#;
 
+pub const ANTIGRAVITY_ANTHRO_REVIEW_SKILL_MD: &str = r#"---
+name: anthro-review
+description: Review the current implementation against the approved plan using the Anthro Bridge external reviewer without editing code or committing.
+---
+
+# Anthro Review
+
+Review an implementation against its approved implementation plan using the Anthro Bridge external MCP review tool.
+
+## Instructions
+1. Identify the approved implementation plan using the following priority:
+   - Priority 1: An approved implementation plan present in the active conversation context.
+   - Priority 2: An active implementation plan artifact (e.g. `implementation_plan.md`).
+   - If neither is found, STOP immediately and ask the user to provide or specify the plan to review. Do not guess from historical transcripts or older plan files (review tool calls = 0).
+2. Collect working tree changes and status:
+   - Inspect git status: run `git status --short`.
+   - Collect tracked changes: run `git diff HEAD` to capture all staged and unstaged modifications from HEAD to the working tree.
+   - Collect untracked changes: for all review-relevant untracked files (source, tests, configs, scripts, resources, docs) appearing as `??` in `git status --short`, read their content and append as synthetic diff blocks:
+     ```text
+     --- UNTRACKED FILE: path/to/file ---
+     <content>
+     ```
+   - For large binary, vendor, or generated files that cannot be transmitted in full, provide explicit metadata instead (path, type, size, omission reason).
+   - Do not silently truncate the review payload. If the complete relevant diff cannot fit within context, STOP and report that the review cannot be performed reliably rather than requesting an approval from incomplete evidence.
+3. Inspect relevant code and bridge context:
+   - Read adjacent source files, contract boundaries, caller/callee invariants, or surrounding repository context when required to understand invariants.
+   - Distill the relevant findings into `additional_context`. Never assume repository files inspected by the host agent are automatically visible to the external reviewer model.
+4. Collect test results:
+   - Run or gather test outputs (`cargo test`, `npm test`, etc.) unless the change is documentation-only.
+5. Call `anthro-bridge/review`:
+   - Call `anthro-bridge/review` exactly once upon receipt of a usable verdict.
+   - A usable verdict must contain one of the following consistent pairs:
+     - `Decision: Approved` with `Commit readiness: READY`
+     - `Decision: Approved with recommendations` with `Commit readiness: READY`
+     - `Decision: Not approved` with `Commit readiness: NOT READY`
+   - Any response missing these sections, containing an unsupported decision, or presenting contradictory readiness (e.g. `Approved` + `NOT READY`) is unusable.
+   - Duplicate review calls are prohibited once a usable verdict is obtained.
+   - If the tool call itself fails or returns an unusable response (e.g. transport, decoding error, or inconsistent verdict), exactly 1 recovery retry is permitted.
+   - Supply:
+     - `task`: Concise statement of what was implemented.
+     - `approved_plan`: The exact text of the approved plan.
+     - `git_diff`: Tracked diff (`git diff HEAD`) plus review-relevant untracked files.
+     - `git_status`: Output of `git status --short`.
+     - `test_results`: Test summary (if applicable).
+     - `additional_context`: Surrounding contracts or constraints inspected by the host agent.
+6. Present the returned review verdict verbatim (Approved / Approved with recommendations / Not approved) along with the Plan Compliance Matrix and Blocking Issues.
+7. Do not edit files.
+8. Do not create git commits, tags, or releases.
+9. Stop after presenting the review verdict.
+"#;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum AntigravitySkillStatus {
@@ -3531,6 +3582,7 @@ pub struct AntigravityCommandsInfo {
     pub skills_dir: String,
     pub plan_command: AntigravityCommandItemInfo,
     pub revise_command: AntigravityCommandItemInfo,
+    pub review_command: AntigravityCommandItemInfo,
 }
 
 fn antigravity_global_skills_dir() -> Result<PathBuf, String> {
@@ -3555,7 +3607,8 @@ pub fn resolve_allowed_antigravity_command(name: &str) -> Result<(&'static str, 
     match name {
         "anthro-plan" => Ok(("anthro-plan", "/anthro-plan", ANTIGRAVITY_ANTHRO_PLAN_SKILL_MD)),
         "anthro-revise" => Ok(("anthro-revise", "/anthro-revise", ANTIGRAVITY_ANTHRO_REVISE_SKILL_MD)),
-        _ => Err(format!("Unsupported Antigravity command name: '{name}'. Only 'anthro-plan' and 'anthro-revise' are supported.")),
+        "anthro-review" => Ok(("anthro-review", "/anthro-review", ANTIGRAVITY_ANTHRO_REVIEW_SKILL_MD)),
+        _ => Err(format!("Unsupported Antigravity command name: '{name}'. Only 'anthro-plan', 'anthro-revise', and 'anthro-review' are supported.")),
     }
 }
 
@@ -3664,11 +3717,13 @@ pub fn remove_antigravity_command_at(skills_root: &Path, name: &str) -> Result<A
 pub fn get_antigravity_commands_info_at(skills_root: &Path) -> Result<AntigravityCommandsInfo, String> {
     let plan_command = inspect_antigravity_command_status_at(skills_root, "anthro-plan")?;
     let revise_command = inspect_antigravity_command_status_at(skills_root, "anthro-revise")?;
+    let review_command = inspect_antigravity_command_status_at(skills_root, "anthro-review")?;
 
     Ok(AntigravityCommandsInfo {
         skills_dir: skills_root.to_string_lossy().to_string(),
         plan_command,
         revise_command,
+        review_command,
     })
 }
 
@@ -3702,12 +3757,17 @@ fn remove_antigravity_command(name: String) -> Result<AntigravityCommandsInfo, S
     get_antigravity_commands_info_at(&root)
 }
 
+pub fn install_all_antigravity_commands_at(skills_root: &Path) -> Result<AntigravityCommandsInfo, String> {
+    install_antigravity_command_at(skills_root, "anthro-plan")?;
+    install_antigravity_command_at(skills_root, "anthro-revise")?;
+    install_antigravity_command_at(skills_root, "anthro-review")?;
+    get_antigravity_commands_info_at(skills_root)
+}
+
 #[tauri::command]
 fn install_all_antigravity_commands() -> Result<AntigravityCommandsInfo, String> {
     let root = antigravity_global_skills_dir()?;
-    install_antigravity_command_at(&root, "anthro-plan")?;
-    install_antigravity_command_at(&root, "anthro-revise")?;
-    get_antigravity_commands_info_at(&root)
+    install_all_antigravity_commands_at(&root)
 }
 
 // ---------------------------------------------------------------------------
@@ -10820,12 +10880,14 @@ mod tests {
         assert!(install_antigravity_command_at(skills_root, "invalid_name").is_err());
         assert!(remove_antigravity_command_at(skills_root, "invalid_name").is_err());
 
-        // 2. Initially NotInstalled for both commands
+        // 2. Initially NotInstalled for all commands
         let info = get_antigravity_commands_info_at(skills_root).unwrap();
         assert_eq!(info.plan_command.status, AntigravitySkillStatus::NotInstalled);
         assert_eq!(info.revise_command.status, AntigravitySkillStatus::NotInstalled);
+        assert_eq!(info.review_command.status, AntigravitySkillStatus::NotInstalled);
         assert_eq!(info.plan_command.slash_command, "/anthro-plan");
         assert_eq!(info.revise_command.slash_command, "/anthro-revise");
+        assert_eq!(info.review_command.slash_command, "/anthro-review");
 
         // 3. Install anthro-plan
         let plan_info = install_antigravity_command_at(skills_root, "anthro-plan").unwrap();
@@ -10835,11 +10897,19 @@ mod tests {
         let written = std::fs::read_to_string(&plan_file).unwrap();
         assert!(written.contains("name: anthro-plan"));
 
-        // 4. Install anthro-revise
+        // 4. Install anthro-revise and anthro-review
         let revise_info = install_antigravity_command_at(skills_root, "anthro-revise").unwrap();
         assert_eq!(revise_info.status, AntigravitySkillStatus::Installed);
         let revise_file = skills_root.join("anthro-revise").join("SKILL.md");
         assert!(revise_file.exists());
+
+        let review_info = install_antigravity_command_at(skills_root, "anthro-review").unwrap();
+        assert_eq!(review_info.status, AntigravitySkillStatus::Installed);
+        let review_file = skills_root.join("anthro-review").join("SKILL.md");
+        assert!(review_file.exists());
+        let review_written = std::fs::read_to_string(&review_file).unwrap();
+        assert!(review_written.contains("name: anthro-review"));
+        assert!(review_written.contains("git diff HEAD"));
 
         // 5. Newline normalization check (CRLF vs LF does NOT trigger Outdated)
         let crlf_content = ANTIGRAVITY_ANTHRO_PLAN_SKILL_MD.replace('\n', "\r\n");
@@ -10872,15 +10942,69 @@ mod tests {
         assert!(user_custom_note.exists());
         assert!(skills_root.join("anthro-plan").exists());
         assert!(revise_file.exists());
+        assert!(review_file.exists());
 
         // 10. Invalid SKILL.md (directory named SKILL.md)
         let broken_dir = skills_root.join("broken_test");
         std::fs::create_dir_all(broken_dir.join("SKILL.md")).unwrap();
-        let broken_status = inspect_antigravity_command_status_at(&broken_dir.parent().unwrap(), "anthro-plan");
+        let _broken_status = inspect_antigravity_command_status_at(&broken_dir.parent().unwrap(), "anthro-plan");
         // Re-check anthro-plan when SKILL.md is a directory
         std::fs::create_dir_all(skills_root.join("anthro-plan").join("SKILL.md")).unwrap();
         let info_invalid = inspect_antigravity_command_status_at(skills_root, "anthro-plan").unwrap();
         assert_eq!(info_invalid.status, AntigravitySkillStatus::Invalid);
         assert!(info_invalid.error.is_some());
+
+        // 11. Dedicated full lifecycle for /anthro-review:
+        // NotInstalled -> install -> Installed -> simulate canonical change -> Outdated -> update -> Installed -> remove -> NotInstalled
+        let temp_review_dir = tempfile::tempdir().unwrap();
+        let review_root = temp_review_dir.path();
+
+        // Initially NotInstalled
+        let review_initial = inspect_antigravity_command_status_at(review_root, "anthro-review").unwrap();
+        assert_eq!(review_initial.status, AntigravitySkillStatus::NotInstalled);
+
+        // Install
+        let review_installed = install_antigravity_command_at(review_root, "anthro-review").unwrap();
+        assert_eq!(review_installed.status, AntigravitySkillStatus::Installed);
+        let review_installed_file = review_root.join("anthro-review").join("SKILL.md");
+        assert!(review_installed_file.exists());
+
+        // User edits skill content -> Outdated
+        std::fs::write(&review_installed_file, "# Modified anthro-review").unwrap();
+        let review_outdated = inspect_antigravity_command_status_at(review_root, "anthro-review").unwrap();
+        assert_eq!(review_outdated.status, AntigravitySkillStatus::Outdated);
+
+        // Update -> Installed and backup created
+        let review_updated = install_antigravity_command_at(review_root, "anthro-review").unwrap();
+        assert_eq!(review_updated.status, AntigravitySkillStatus::Installed);
+        let review_backup = review_root.join("anthro-review").join("SKILL.md.bak");
+        assert!(review_backup.exists());
+        assert!(std::fs::read_to_string(&review_backup).unwrap().contains("Modified anthro-review"));
+
+        // Remove -> NotInstalled
+        let review_removed = remove_antigravity_command_at(review_root, "anthro-review").unwrap();
+        assert_eq!(review_removed.status, AntigravitySkillStatus::NotInstalled);
+        assert!(!review_installed_file.exists());
+
+        // 12. Backend install_all_antigravity_commands_at verification:
+        // Fresh directory -> call production install_all_antigravity_commands_at -> all 3 commands Installed and on disk
+        let temp_all_dir = tempfile::tempdir().unwrap();
+        let all_root = temp_all_dir.path();
+
+        let initial_all = get_antigravity_commands_info_at(all_root).unwrap();
+        assert_eq!(initial_all.plan_command.status, AntigravitySkillStatus::NotInstalled);
+        assert_eq!(initial_all.revise_command.status, AntigravitySkillStatus::NotInstalled);
+        assert_eq!(initial_all.review_command.status, AntigravitySkillStatus::NotInstalled);
+
+        // Call production install_all_antigravity_commands_at directly
+        let installed_all = install_all_antigravity_commands_at(all_root).unwrap();
+        assert_eq!(installed_all.plan_command.status, AntigravitySkillStatus::Installed);
+        assert_eq!(installed_all.revise_command.status, AntigravitySkillStatus::Installed);
+        assert_eq!(installed_all.review_command.status, AntigravitySkillStatus::Installed);
+
+        // Verify disk files
+        assert!(all_root.join("anthro-plan").join("SKILL.md").exists());
+        assert!(all_root.join("anthro-revise").join("SKILL.md").exists());
+        assert!(all_root.join("anthro-review").join("SKILL.md").exists());
     }
 }

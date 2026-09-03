@@ -31,7 +31,39 @@ pub struct PlanParams {
     pub constraints: Option<String>,
 }
 
-/// The `plan` tool handler. Generic over the planner provider so tests can
+/// Arguments accepted by the `review` tool.
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct ReviewParams {
+    /// Concise description of the overarching goal or task.
+    #[schemars(description = "Concise summary of the task being reviewed")]
+    pub task: String,
+
+    /// The exact text of the approved implementation plan.
+    #[schemars(description = "The approved implementation plan against which the diff is judged")]
+    pub approved_plan: String,
+
+    /// Complete diff of tracked changes (git diff HEAD) plus review-relevant untracked file contents.
+    #[schemars(description = "Complete diff containing tracked changes (git diff HEAD) and review-relevant untracked file contents")]
+    pub git_diff: String,
+
+    /// Current working tree status (`git status --short`).
+    #[schemars(description = "Summary of modified, added, untracked, and deleted files (git status --short)")]
+    pub git_status: String,
+
+    /// Automated test results and validation logs (optional for doc-only changes).
+    #[schemars(description = "Automated test execution results, pass/fail counts, and validation logs")]
+    pub test_results: Option<String>,
+
+    /// Review depth mode: "standard" (default) or "deep".
+    #[schemars(description = "Review depth: 'standard' or 'deep'")]
+    pub review_mode: Option<String>,
+
+    /// Supplementary repository context, surrounding contracts, call sites, or constraints collected by the calling agent.
+    #[schemars(description = "Supplementary repository context, surrounding contracts, call sites, or constraints collected by the calling agent")]
+    pub additional_context: Option<String>,
+}
+
+/// The MCP planner and reviewer tool handler. Generic over the planner provider so tests can
 /// inject a fake provider.
 pub struct PlannerTool<P: PlannerProvider> {
     provider: Arc<P>,
@@ -54,7 +86,7 @@ impl<P: PlannerProvider> PlannerTool<P> {
         &self,
         Parameters(params): Parameters<PlanParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        validate_params(&params)?;
+        validate_plan_params(&params)?;
 
         let system_prompt = build_system_prompt();
         let user_prompt =
@@ -68,14 +100,35 @@ impl<P: PlannerProvider> PlannerTool<P> {
             }
         }
     }
+
+    #[tool(
+        description = "Evaluate whether an implementation accurately, safely, and cleanly fulfills an approved plan, outputting a 3-tier verdict (Approved, Approved with recommendations, Not approved)."
+    )]
+    async fn review(
+        &self,
+        Parameters(params): Parameters<ReviewParams>,
+    ) -> Result<CallToolResult, ErrorData> {
+        validate_review_params(&params)?;
+
+        let system_prompt = build_review_system_prompt();
+        let user_prompt = build_review_user_prompt(&params);
+
+        match self.provider.plan(&system_prompt, &user_prompt).await {
+            Ok(plan) => Ok(CallToolResult::success(vec![ContentBlock::text(plan.text)])),
+            Err(err) => {
+                tracing::error!(error = %err, "reviewer provider error");
+                Err(provider_error_to_mcp(err))
+            }
+        }
+    }
 }
 
 #[tool_handler(
-    instructions = "Generate implementation plans using a configured external planner model."
+    instructions = "Generate implementation plans and evaluate code implementations using a configured external model."
 )]
 impl<P: PlannerProvider> ServerHandler for PlannerTool<P> {}
 
-fn validate_params(params: &PlanParams) -> Result<(), ErrorData> {
+fn validate_plan_params(params: &PlanParams) -> Result<(), ErrorData> {
     if params.task.trim().is_empty() {
         return Err(ErrorData::invalid_params("`task` must not be empty", None));
     }
@@ -85,6 +138,53 @@ fn validate_params(params: &PlanParams) -> Result<(), ErrorData> {
             None,
         ));
     }
+    Ok(())
+}
+
+pub fn resolve_review_mode(mode: Option<&str>) -> Result<&'static str, ErrorData> {
+    match mode {
+        None => Ok("standard"),
+        Some(s) => {
+            let trimmed = s.trim();
+            if trimmed.is_empty() || trimmed == "standard" {
+                Ok("standard")
+            } else if trimmed == "deep" {
+                Ok("deep")
+            } else {
+                Err(ErrorData::invalid_params(
+                    format!(
+                        "Invalid `review_mode`: '{trimmed}'. Only 'standard' and 'deep' are supported."
+                    ),
+                    None,
+                ))
+            }
+        }
+    }
+}
+
+fn validate_review_params(params: &ReviewParams) -> Result<(), ErrorData> {
+    if params.task.trim().is_empty() {
+        return Err(ErrorData::invalid_params("`task` must not be empty", None));
+    }
+    if params.approved_plan.trim().is_empty() {
+        return Err(ErrorData::invalid_params(
+            "`approved_plan` must not be empty",
+            None,
+        ));
+    }
+    if params.git_diff.trim().is_empty() {
+        return Err(ErrorData::invalid_params(
+            "`git_diff` must not be empty",
+            None,
+        ));
+    }
+    if params.git_status.trim().is_empty() {
+        return Err(ErrorData::invalid_params(
+            "`git_status` must not be empty",
+            None,
+        ));
+    }
+    resolve_review_mode(params.review_mode.as_deref())?;
     Ok(())
 }
 
@@ -123,6 +223,99 @@ pub fn build_user_prompt(task: &str, context: &str, constraints: Option<&str>) -
     if let Some(constraints) = constraints {
         if !constraints.trim().is_empty() {
             sections.push(format!("## Constraints\n\n{}", constraints));
+        }
+    }
+
+    sections.join("\n\n")
+}
+
+/// Builds the review system prompt (constant reviewer role instructions).
+pub fn build_review_system_prompt() -> String {
+    [
+        "You are a strict, read-only software implementation reviewer, not an implementation agent.",
+        "Your task is to independently evaluate whether the supplied implementation changes accurately, safely, and cleanly fulfill the approved plan.",
+        "",
+        "Follow these rules strictly:",
+        "",
+        "1. Core Principles:",
+        "- You are read-only. Do not output patches, do not write replacement code, and do not execute modifications.",
+        "- Tests passing are necessary but not sufficient for approval. You must actively inspect the diff, boundary conditions, contracts, and repository context.",
+        "- If test_results are absent: determine whether automated tests were reasonably required for the changes. If code logic changed but no test evidence is provided, this may be a blocking issue. If the change is documentation-only or otherwise does not reasonably require tests, absence of test results is not itself a blocker.",
+        "- Do not guess or assume repository contents beyond what is provided in the prompt. Base your evaluation strictly on the approved plan, git diff, git status, test results, and additional context provided.",
+        "",
+        "2. Review Dimensions:",
+        "Always evaluate:",
+        "- Scope compliance: verify no unauthorized files or unrelated subsystems were modified (cross-referencing git_status and untracked files).",
+        "- Plan compliance: map every requirement from the approved plan to concrete implementation evidence.",
+        "- Contract preservation: verify public APIs, return types, schemas, and backward-compatible fallbacks remain intact.",
+        "- Algorithmic correctness: check logic branches, boundary conditions, indexing, nullability, and state invariants.",
+        "- Failure & error handling: verify error propagation, message sanitization, and graceful degradation.",
+        "- Test adequacy: check whether tests cover edge cases and failure modes, not just happy paths.",
+        "- Diff hygiene: detect leftover debug code, temporary artifacts, formatting churn, or unintentional EOL changes.",
+        "Evaluate when relevant (or in deep review mode):",
+        "- Determinism & RNG: execution ordering, seed handling, reproducibility.",
+        "- Concurrency & parallelism: lock contention, async lifetimes, race conditions, deadlock risks.",
+        "- Performance & memory: expensive allocations in hot paths, quadratic loops, unnecessary cloning.",
+        "",
+        "3. Output Format & Verdict Rules:",
+        "Your response MUST begin with the following decision header:",
+        "",
+        "# Review Summary",
+        "",
+        "Decision: <Approved | Approved with recommendations | Not approved>",
+        "Commit readiness: <READY | NOT READY>",
+        "",
+        "Verdict definitions:",
+        "- 'Decision: Approved' with 'Commit readiness: READY': all plan requirements, contracts, and test obligations are verified. No blocking issues.",
+        "- 'Decision: Approved with recommendations' with 'Commit readiness: READY': the implementation is safe to commit as-is. All recommendations are strictly optional enhancements or non-functional polish that do not block committing.",
+        "- 'Decision: Not approved' with 'Commit readiness: NOT READY': one or more blocking issues exist (broken contract, omitted requirement, missing required tests, regressions, or unauthorized file changes).",
+        "",
+        "Follow the header with:",
+        "",
+        "## Plan Compliance Matrix",
+        "A Markdown table mapping each requirement from the approved plan to implementation location, evidence, and PASS/FAIL status.",
+        "",
+        "## Blocking Issues",
+        "If none: '- None'. Otherwise, for each blocker include:",
+        "### <Number>. <Title>",
+        "- Severity: Blocking",
+        "- Location: <file:line>",
+        "- Problem: <clear defect description>",
+        "- Why it matters: <impact on safety, correctness, or contracts>",
+        "- Required fix: <concrete guidance for the build agent>",
+        "",
+        "## Recommendations & Non-Blocking Notes",
+        "If none: '- None'. List any optional suggestions or future considerations.",
+        "",
+        "## Verification & Test Assessment",
+        "A concise assessment of test execution status and coverage adequacy.",
+    ]
+    .join("\n")
+}
+
+/// Builds the review user prompt from `ReviewParams`.
+pub fn build_review_user_prompt(params: &ReviewParams) -> String {
+    let mut sections = vec![
+        format!("## Task Summary\n\n{}", params.task),
+        format!("## Approved Implementation Plan\n\n{}", params.approved_plan),
+        format!("## Working Tree Status (git status)\n\n{}", params.git_status),
+        format!("## Implementation Diff\n\n{}", params.git_diff),
+    ];
+
+    if let Some(ref tests) = params.test_results {
+        if !tests.trim().is_empty() {
+            sections.push(format!("## Test Results\n\n{}", tests));
+        }
+    } else {
+        sections.push("## Test Results\n\n[No test results provided]".to_string());
+    }
+
+    let effective_mode = resolve_review_mode(params.review_mode.as_deref()).unwrap_or("standard");
+    sections.push(format!("## Review Mode\n\n{}", effective_mode));
+
+    if let Some(ref ctx) = params.additional_context {
+        if !ctx.trim().is_empty() {
+            sections.push(format!("## Additional Repository Context & Contracts\n\n{}", ctx));
         }
     }
 
