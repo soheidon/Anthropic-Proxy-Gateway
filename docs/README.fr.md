@@ -54,6 +54,19 @@ la compilation et les tests via l'abonnement
 - **Configuration GUI en direct** : La modification du fournisseur, du modèle ou de l'effort de raisonnement dans Anthro Bridge prend effet immédiatement lors du prochain appel de `plan()`, sans redémarrer Antigravity.
 - **Guide de configuration** : [Guide de configuration Google Antigravity + MCP Anthro Bridge](ANTIGRAVITY_MCP.fr.md)
 
+**Commandes globales Antigravity disponibles :**
+
+- **`/anthro-plan`** — Déléguer la planification d'implémentation au modèle externe configuré.
+- **`/anthro-revise`** — Réviser un plan existant en fonction de nouveaux retours ou contraintes.
+- **`/anthro-review`** — Examiner une implémentation terminée par rapport au plan approuvé avant le commit, avec des verdicts explicites READY / NOT READY.
+
+**Flux de travail recommandé :**
+
+```text
+/anthro-plan → Implémentation & Tests → /anthro-review → Commit
+```
+
+
 #### Flux de travail du planificateur Antigravity
 
 Anthro Bridge sépare la découverte du référentiel et du contexte de la planification de la mise en œuvre.
@@ -76,9 +89,11 @@ La saisie directe d'images est prise en charge séparément via la passerelle 3P
 | **MiniMax** | API directe | MiniMax M3, M2.7 | Spécifique au modèle |
 | **Kimi / Moonshot** | API directe | Kimi K2.x, Kimi K3 | Thinking / Effort de raisonnement |
 | **MiMo / Xiaomi** | API directe | MiMo V2.5, V2.5 Pro | Mode Thinking |
-| **OpenRouter** | Passerelle multi-profil | Poolside, Tencent, InclusionAI, StepFun, OpenAI GPT-5.6, Google Gemini, etc. | Spécifique au modèle / profil |
+| **OpenRouter** | Passerelle multi-profil | Poolside, Tencent, InclusionAI, StepFun, OpenAI GPT-5.6, Google Gemini (3.8 Flash, 3.7 Flash, 3.5 Flash Lite, 3.1 Pro Preview), etc. | Spécifique au modèle / profil |
 
 > **Note sur `deepseek-v4-flash-vision-exp`** : Prend en charge la saisie directe d'images via la passerelle (Base64 / URL d'image). Dans le flux de planification MCP d'Antigravity, il est actuellement utilisé comme modèle de planification textuel.
+
+> **Google Gemini via OpenRouter** — `google/gemini-3.8-flash`, `google/gemini-3.7-flash`, `google/gemini-3.5-flash-lite` et `google/gemini-3.1-pro-preview` avec effort de raisonnement (`low` / `medium` / `high`) et prise en charge des images. Profil **OpenRouter : Gemini** intégré : Opus 5 → Gemini 3.8 Flash / High · Sonnet 5 → Gemini 3.8 Flash / Medium · Haiku 4.5 → Gemini 3.8 Flash / Low.
 
 ---
 

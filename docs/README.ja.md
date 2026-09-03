@@ -54,6 +54,19 @@ Antigravity がサブスク枠で
 - **リアルタイム GUI 設定**: Anthro Bridge の GUI でプランナープロバイダー、モデル、Thinking/推論強度を変更すると、次回の `plan()` 呼び出しから即座に反映。
 - **セットアップガイド**: [Google Antigravity + Anthro Bridge MCP 設定手順](ANTIGRAVITY_MCP.ja.md)
 
+**利用可能な Antigravity グローバルコマンド:**
+
+- **`/anthro-plan`** — 実装計画の策定を設定済み外部モデルへ委託。
+- **`/anthro-revise`** — 新しいフィードバックや制約に基づいて既存の計画を改訂。
+- **`/anthro-review`** — コミット前に完了した実装を承認済みプランと照合してレビュー。READY / NOT READY の明示的な判定を返す。
+
+**推奨ワークフロー:**
+
+```text
+/anthro-plan → 実装 & テスト → /anthro-review → コミット
+```
+
+
 #### Antigravity プランナーのワークフロー
 
 Anthro Bridge はリポジトリやコンテキストの探索と、実装計画の作成を明確に分離します。
@@ -76,9 +89,11 @@ Antigravity ワークフローでは、まず Antigravity 自身がリポジト�
 | **MiniMax** | 直接 API | MiniMax M3, M2.7 | モデル固有 |
 | **Kimi / Moonshot** | 直接 API | Kimi K2.x, Kimi K3 | Thinking / 推論強度 |
 | **MiMo / Xiaomi** | 直接 API | MiMo V2.5, V2.5 Pro | Thinking モード |
-| **OpenRouter** | マルチプロファイル Gateway | Poolside, Tencent, InclusionAI, StepFun, OpenAI GPT-5.6, Google Gemini 等 | モデル固有 / プロファイル固有 |
+| **OpenRouter** | マルチプロファイル Gateway | Poolside, Tencent, InclusionAI, StepFun, OpenAI GPT-5.6, Google Gemini (3.8 Flash, 3.7 Flash, 3.5 Flash Lite, 3.1 Pro Preview) 等 | モデル固有 / プロファイル固有 |
 
 > **`deepseek-v4-flash-vision-exp` について**: Gateway 経由での直接画像入力（Base64 / 画像 URL）に対応しています。Antigravity MCP プランナーワークフロー内では、現在はテキストベースのプランナーモデルとして利用されます。
+
+> **Google Gemini via OpenRouter** — `google/gemini-3.8-flash`、`google/gemini-3.7-flash`、`google/gemini-3.5-flash-lite`、`google/gemini-3.1-pro-preview` に対応。推論強度（`low` / `medium` / `high`）および画像入力をサポート。組み込みの **OpenRouter: Gemini** プリセット: Opus 5 → Gemini 3.8 Flash / High · Sonnet 5 → Gemini 3.8 Flash / Medium · Haiku 4.5 → Gemini 3.8 Flash / Low。
 
 ---
 

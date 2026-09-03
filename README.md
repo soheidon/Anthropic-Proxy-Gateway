@@ -47,6 +47,18 @@ using subscription-backed capacity
 - **Live GUI Configuration**: Switching the planner provider, model, or reasoning effort in Anthro Bridge takes effect immediately on the next `plan()` invocation.
 - **Setup Guide**: [Google Antigravity + Anthro Bridge MCP Setup](docs/ANTIGRAVITY_MCP.md)
 
+**Global Antigravity commands available:**
+
+- **`/anthro-plan`** — Delegate implementation planning to the configured external model.
+- **`/anthro-revise`** — Revise an existing plan based on new feedback or constraints.
+- **`/anthro-review`** — Review a completed implementation against the approved plan before commit, with explicit READY / NOT READY verdicts.
+
+**Recommended workflow:**
+
+```text
+/anthro-plan → Implementation & Tests → /anthro-review → Commit
+```
+
 #### Antigravity Planner Workflow
 
 Anthro Bridge separates repository/context discovery from implementation planning.
@@ -69,9 +81,11 @@ Direct image input is supported separately through the Anthro Bridge Gateway for
 | **MiniMax** | Direct API | MiniMax M3, M2.7 | Model-specific |
 | **Kimi / Moonshot** | Direct API | Kimi K2.x, Kimi K3 | Thinking / Reasoning effort |
 | **MiMo / Xiaomi** | Direct API | MiMo V2.5, V2.5 Pro | Thinking mode |
-| **OpenRouter** | Multi-profile Gateway | Poolside, Tencent, InclusionAI, StepFun, OpenAI GPT-5.6, Google Gemini, etc. | Model-specific / Profile-specific |
+| **OpenRouter** | Multi-profile Gateway | Poolside, Tencent, InclusionAI, StepFun, OpenAI GPT-5.6, Google Gemini (3.8 Flash, 3.7 Flash, 3.5 Flash Lite, 3.1 Pro Preview), etc. | Model-specific / Profile-specific |
 
 > **Note on `deepseek-v4-flash-vision-exp`**: Supports direct image input through the Gateway (Base64 / image URL). In the Antigravity MCP planner workflow, it is currently used as a text-based planner model.
+
+> **Google Gemini via OpenRouter** — `google/gemini-3.8-flash`, `google/gemini-3.7-flash`, `google/gemini-3.5-flash-lite`, and `google/gemini-3.1-pro-preview` with reasoning-effort (`low` / `medium` / `high`) and image input support. Built-in **OpenRouter: Gemini** preset: Opus 5 → Gemini 3.8 Flash / High · Sonnet 5 → Gemini 3.8 Flash / Medium · Haiku 4.5 → Gemini 3.8 Flash / Low.
 
 ---
 

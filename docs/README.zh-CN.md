@@ -54,6 +54,19 @@ Antigravity 使用订阅额度
 - **实时 GUI 配置**：在 Anthro Bridge 中切换规划器提供商、模型或推理强度时，会在下一次 `plan()` 调用时立即生效，无需重启 Antigravity。
 - **设置指南**：[Google Antigravity + Anthro Bridge MCP 设置指南](ANTIGRAVITY_MCP.zh-CN.md)
 
+**可用的 Antigravity 全局命令：**
+
+- **`/anthro-plan`** — 将实现规划委托给已配置的外部模型。
+- **`/anthro-revise`** — 根据新的反馈或约束修订现有计划。
+- **`/anthro-review`** — 在提交前将已完成的实现与已批准的计划进行对比审查，返回明确的 READY / NOT READY 判定。
+
+**推荐工作流：**
+
+```text
+/anthro-plan → 实现 & 测试 → /anthro-review → 提交
+```
+
+
 #### Antigravity 规划器工作流程
 
 Anthro Bridge 将代码库与上下文探索和实现规划明确分开。
@@ -76,9 +89,11 @@ Anthro Bridge 将代码库与上下文探索和实现规划明确分开。
 | **MiniMax** | 直接 API | MiniMax M3, M2.7 | 特定模型支持 |
 | **Kimi / Moonshot** | 直接 API | Kimi K2.x, Kimi K3 | 思考 / 推理强度 |
 | **MiMo / Xiaomi** | 直接 API | MiMo V2.5, V2.5 Pro | 思考模式 |
-| **OpenRouter** | 多配置文件网关 | Poolside, Tencent, InclusionAI, StepFun, OpenAI GPT-5.6, Google Gemini 等 | 特定模型 / 特定配置文件 |
+| **OpenRouter** | 多配置文件网关 | Poolside, Tencent, InclusionAI, StepFun, OpenAI GPT-5.6, Google Gemini (3.8 Flash, 3.7 Flash, 3.5 Flash Lite, 3.1 Pro Preview) 等 | 特定模型 / 特定配置文件 |
 
 > **关于 `deepseek-v4-flash-vision-exp` 的说明**：支持通过 Gateway 直接输入图像（Base64 / 图片 URL）。在 Antigravity MCP 规划器工作流程中，目前作为基于文本的规划器模型使用。
+
+> **Google Gemini via OpenRouter** — 支持 `google/gemini-3.8-flash`、`google/gemini-3.7-flash`、`google/gemini-3.5-flash-lite` 和 `google/gemini-3.1-pro-preview`，提供推理强度（`low` / `medium` / `high`）和图像输入支持。内置 **OpenRouter: Gemini** 预设：Opus 5 → Gemini 3.8 Flash / High · Sonnet 5 → Gemini 3.8 Flash / Medium · Haiku 4.5 → Gemini 3.8 Flash / Low。
 
 ---
 
